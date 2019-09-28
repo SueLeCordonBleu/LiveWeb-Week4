@@ -102,6 +102,11 @@ io.sockets.on('connection',
       io.sockets.emit('toggleLive');
     });
 
+    socket.on('play', function() {
+      console.log("Start to play fake video");
+      io.sockets.emit('play');
+    });
+
 
     socket.on('chatmessage', function(message) {
       console.log("got message: " + message);

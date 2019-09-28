@@ -34,6 +34,10 @@
 				}
 			});
 
+			socket.on('play', function() {
+				document.getElementById('fakeStream').play();
+			});
+
 			socket.on('streamer', function () {
 				streamer = true;
 				console.log('I am the streamer!!');
@@ -47,6 +51,7 @@
 
       window.addEventListener('load', function() {
 				// The video element on the page to display the webcam
+
 				video = document.getElementById('realStream');
 				video.style.visibility = 'hidden';
 				video.style.position = 'absolute';
@@ -63,24 +68,30 @@
 				let toggleButton = document.getElementById('toggleStream');
 				toggleButton.style.visibility = 'hidden';
 
-				// Constraints - what do we want?
-				let constraints = { audio: true, video: true }
+				let playButton = document.getElementById('play');
+				playButton.style.visibility = 'hidden';
 
-				// Prompt the user for permission, get the stream
-				navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
-					/* Use the stream */
+				if (streamer == true) {
+					// Constraints - what do we want?
+					let constraints = { audio: true, video: true }
 
-					// Attach to our video object
-					video.srcObject = stream;
-					// Wait for the stream to load enough to play
-					video.onloadedmetadata = function(e) {
-						video.play();
-					};
-				})
-				.catch(function(err) {
-					/* Handle the error */
-					alert(err);
-				});
+					// Prompt the user for permission, get the stream
+					navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
+						/* Use the stream */
+
+						// Attach to our video object
+						video.srcObject = stream;
+						// Wait for the stream to load enough to play
+						video.onloadedmetadata = function(e) {
+							video.play();
+						};
+					})
+					.catch(function(err) {
+						/* Handle the error */
+						alert(err);
+					});
+				}
+
 
 				canvas = document.getElementById('mycanvas');
 				canvas.style.visibility = 'hidden';
@@ -102,12 +113,17 @@
 					//Control the switch to real stream video
 					if (e.key == "=") {
 						toggleButton.style.visibility = 'visible';
+						playButton.style.visibility = 'visible';
 					}
 					console.log(e);
 				});
 
 				toggleButton.addEventListener('click', function() {
 					socket.emit('toggleLive');
+				});
+
+				playButton.addEventListener('click', function() {
+					socket.emit('play');
 				});
 
 
@@ -131,13 +147,14 @@
 	</head>
 	<body bgcolor="#000000">
 		<video id="realStream" width="400" height="300" muted ></video>
-		<video id = "fakeStream" width = '800' height = '600' autoplay = 'autoplay'> //controls>
+		<video id = "fakeStream" width = '800' height = '600'> //controls>
 				<source src="fakeStream.mov" type="video/mp4">
 				Your browser does not support the video tag.
 		</video>
 		<canvas width="800" height="600" id="mycanvas"></canvas>
 		<img id="otherimage" width="800" height="600" src="" />
 
+		<button id = 'play'>start playing</button>
 		<button id = 'toggleStream'>Switch to real stream!</button>
  		<div id="messages" style="height:500px; width:50%; position:absolute; left:900px; top:10px; color:white; align:center; overflow:scroll">
 		</div>
