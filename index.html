@@ -1,0 +1,149 @@
+<html>
+	<head>
+		<script src="/socket.io/socket.io.js"></script>
+		<script>
+			var socket = io.connect();
+			var streamer = false;
+			var canvas;
+			var context;
+			var video;
+
+			socket.on('connect', function() {
+				console.log("Connected");
+			});
+
+			socket.on('image', function(imageData) {
+				// Incoming image..
+				//console.log(imageData.image);
+				document.getElementById('otherimage').src = imageData.image;
+			});
+
+			// Receive from any event
+			socket.on('chatmessage', function (data) {
+				//console.log(data);
+				document.getElementById('messages').innerHTML = data+ "<br>" +
+				"" + document.getElementById('messages').innerHTML;
+			});
+
+
+			socket.on('toggleLive', function() {
+				document.getElementById('fakeStream').style.visibility = 'hidden';
+				document.getElementById('otherimage').style.visibility = 'visible';
+				if (streamer == true ) {
+					setInterval(emitVideoImg, 50);
+				}
+			});
+
+			socket.on('streamer', function () {
+				streamer = true;
+				console.log('I am the streamer!!');
+			});
+
+			var sendmessage = function() {
+				var message = document.getElementById('message').value;
+				console.log("Sending: " + message);
+				socket.send(message);
+			};
+
+      window.addEventListener('load', function() {
+				// The video element on the page to display the webcam
+				video = document.getElementById('realStream');
+				video.style.visibility = 'hidden';
+				video.style.position = 'absolute';
+
+				let realStreamImg = document.getElementById('otherimage');
+				realStreamImg.style.visibility = 'hidden';
+				realStreamImg.style.position = 'absolute';
+				realStreamImg.style.zIndex = '-1';
+
+				let fakeVideo = document.getElementById('fakeStream');
+				fakeVideo.style.position = 'absolute';
+				fakeVideo.style.zIndex = '-1';
+
+				let toggleButton = document.getElementById('toggleStream');
+				toggleButton.style.visibility = 'hidden';
+
+				// Constraints - what do we want?
+				let constraints = { audio: true, video: true }
+
+				// Prompt the user for permission, get the stream
+				navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
+					/* Use the stream */
+
+					// Attach to our video object
+					video.srcObject = stream;
+					// Wait for the stream to load enough to play
+					video.onloadedmetadata = function(e) {
+						video.play();
+					};
+				})
+				.catch(function(err) {
+					/* Handle the error */
+					alert(err);
+				});
+
+				canvas = document.getElementById('mycanvas');
+				canvas.style.visibility = 'hidden';
+				canvas.style.position = 'absolute';
+				context = canvas.getContext('2d');
+				context.fillStyle="#000000";
+				context.fillRect(0,0,canvas.width,canvas.height);
+
+				window.addEventListener('click', function(e) {
+					context.drawImage(video, 10, 10);
+						//console.log(canvas.toDataURL("image/jpeg"));
+					let v = {
+						image: canvas.toDataURL("image/jpeg")
+					}
+					socket.emit('image', v);
+				});
+
+				window.addEventListener('keydown', function(e) {
+					//Control the switch to real stream video
+					if (e.key == "=") {
+						toggleButton.style.visibility = 'visible';
+					}
+					console.log(e);
+				});
+
+				toggleButton.addEventListener('click', function() {
+					socket.emit('toggleLive');
+				});
+
+
+      });
+
+		function emitVideoImg() {
+			context.drawImage(video, 10, 10);
+			//console.log(canvas.toDataURL("image/jpeg"));
+			let v = {
+				image: canvas.toDataURL("image/jpeg")
+			}
+			socket.emit('image', v);
+		}
+
+		var sendmessage = function(name, message) {
+			console.log("chatmessage: " + message);
+			socket.emit(name, message);
+		};
+
+		</script>
+	</head>
+	<body bgcolor="#000000">
+		<video id="realStream" width="400" height="300" muted ></video>
+		<video id = "fakeStream" width = '800' height = '600' autoplay = 'autoplay'> //controls>
+				<source src="fakeStream.mov" type="video/mp4">
+				Your browser does not support the video tag.
+		</video>
+		<canvas width="800" height="600" id="mycanvas"></canvas>
+		<img id="otherimage" width="800" height="600" src="" />
+
+		<button id = 'toggleStream'>Switch to real stream!</button>
+ 		<div id="messages" style="height:500px; width:50%; position:absolute; left:900px; top:10px; color:white; align:center; overflow:scroll">
+		</div>
+		<div style="height:50px; width:50%; position:absolute; left:900px; top:550px; align:center">
+			<input type="text" id="message" name="message" style = "background-color:black; color: white">
+	 		<input type="submit" value="Send" onclick="sendmessage('chatmessage', document.getElementById('message').value);">
+		</div>
+	</body>
+</html>
